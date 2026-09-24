@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         NEXUS_URL = "nexus:8082"
-        IMAGE_NAME = "helloapp"
+        IMAGE_NAME = "irobust/helloapp"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
@@ -13,39 +13,37 @@ pipeline {
                 checkout changelog: false, poll: false, scm: scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/irobust/jenkins-example']])
             }
         }
-    }
-
-    stages {
+        
         stage('Build docker image') {
             steps {
-                sh 'docker build -t ${NEXUS_URL}/${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
             }
         }
 
         stage('Login to Nexus'){
             steps{
                 withCredentials([
-                    usernamepassword(
-                        credentials: 'nexus-credentials',
+                    usernamePassword(
+                        credentialsId: 'docker-hub-credentials',
                         usernameVariable: 'NEXUS_USERNAME',
                         passwordVariable: 'NEXUS_PASSWORD'
                     )
                 ]) {
-                    echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} --username "$NEXUS_USERNAME" --password-stdin
+                    sh "echo ${NEXUS_PASSWORD} | docker login --username '$NEXUS_USERNAME' --password-stdin"
                 }
             }
         } 
 
         stage('Push Image'){
             steps {
-                docker push ${NEXUS_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }  
     }
 
     post {
         always {
-            docker logout ${NEXUS_URL} || true
+            sh "docker logout ${NEXUS_URL} || true"
         }
     }
 }
