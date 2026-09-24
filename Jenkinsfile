@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         NEXUS_URL = "nexus:8082"
-        IMAGE_NAME = "helloapp"
+        IMAGE_NAME = "irobust/helloapp"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
@@ -20,30 +20,30 @@ pipeline {
             }
         }
 
-        stage('Login to Nexus'){
+        stage('Login to Docker Hub'){
             steps{
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USERNAME',
-                        passwordVariable: 'NEXUS_PASSWORD'
+                        credentialsId: 'docker-hub-credentials',
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_PASSWORD'
                     )
                 ]) {
-                    sh "echo ${NEXUS_PASSWORD} | docker login ${NEXUS_URL} --username '$NEXUS_USERNAME' --password-stdin"
+                    sh "echo ${DOCKERHUB_PASSWORD} | docker login --username '${DOCKERHUB_USERNAME}' --password-stdin"
                 }
             }
         } 
 
         stage('Push Image'){
             steps {
-                sh "docker push ${NEXUS_URL}/${IMAGE_NAME}:${IMAGE_TAG}"
+                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }  
     }
 
     post {
         always {
-            sh "docker logout ${NEXUS_URL} || true"
+            sh "docker logout || true"
         }
     }
 }
